@@ -22,6 +22,7 @@ class CPAEnv(gym.Env):
     N_DISCRETE_OBS = 10
 
     NEEDED_CORRECT_ANSWERS = 100
+    MAX_NUM_STEPS = 3*NEEDED_CORRECT_ANSWERS
 
     def __init__(self):
         super(CPAEnv, self).__init__()
@@ -38,7 +39,7 @@ class CPAEnv(gym.Env):
         self.last_action = None
         self.last_reward = None
 
-        self.current_round = None
+        self.current_step_num = None
 
     def step(self, action):
         pass
@@ -46,7 +47,7 @@ class CPAEnv(gym.Env):
     def reset(self):
         # Reset score and round
         self.current_score = 0
-        self.current_round = 0
+        self.current_step_num = 0
 
         # Current number if randomly decided from the observation space
         self.current_observation = self.observation_space.sample()
@@ -56,8 +57,8 @@ class CPAEnv(gym.Env):
 
     def render(self, mode='console'):
         # Don't print in first round. No need for that.
-        if self.current_round != 0:
-            print("ROUND {}".format(self.current_round - 1))
+        if self.current_step_num != 0:
+            print("ROUND {}".format(self.current_step_num - 1))
             print("Observation: {}".format(self.last_observation))
             print("Action: {}".format(self.last_action))
             print("Score: {}".format(self.current_score))
@@ -69,6 +70,8 @@ class CPAEnv(gym.Env):
 
 class CPAEnvDense(CPAEnv):
     def step(self, action):
+        self.current_step_num += 1
+
         reward = 0
         done = False
         info = {}
@@ -76,9 +79,9 @@ class CPAEnvDense(CPAEnv):
         if (self.current_observation % 2 == 0 and action == self.EVEN) or (
                 self.current_observation % 2 == 1 and action == self.ODD):
             reward = 1
-            self.current_score += reward
+            self.current_score += 1
 
-        if self.current_score >= self.NEEDED_CORRECT_ANSWERS:
+        if self.current_score >= self.NEEDED_CORRECT_ANSWERS or self.current_step_num >= self.MAX_NUM_STEPS:
             done = True
 
         # Save previous observation and generate new one
@@ -89,13 +92,13 @@ class CPAEnvDense(CPAEnv):
         self.last_action = action
         self.last_reward = reward
 
-        self.current_round += 1
-
         return observation, reward, done, info
 
 
 class CPAEnvSparse(CPAEnv):
     def step(self, action):
+        self.current_step_num += 1
+
         reward = 0
         done = False
         info = {}
@@ -105,7 +108,10 @@ class CPAEnvSparse(CPAEnv):
             self.current_score += 1
 
         if self.current_score >= self.NEEDED_CORRECT_ANSWERS:
-            reward = 1
+            reward = self.NEEDED_CORRECT_ANSWERS
+            done = True
+
+        if self.current_step_num >= self.MAX_NUM_STEPS:
             done = True
 
         # Save previous observation and generate new one
@@ -115,7 +121,5 @@ class CPAEnvSparse(CPAEnv):
 
         self.last_action = action
         self.last_reward = reward
-
-        self.current_round += 1
 
         return observation, reward, done, info
