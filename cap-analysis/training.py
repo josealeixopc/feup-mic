@@ -1,6 +1,7 @@
 import argparse
 import errno
 import os
+
 from datetime import datetime
 
 AVAILABLE_ALGORITHMS = ['acktr', 'ppo', 'a2c', 'dqn']
