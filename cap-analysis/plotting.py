@@ -23,6 +23,29 @@ HANDLES = None
 MAX_LENGTH = None
 
 
+def calculate_average_time_per_timestep(dirs):
+    tslist = []
+    for folder in dirs:
+        timesteps = load_results(folder)
+        tslist.append(timesteps)
+
+    xy_list = [ts2xy(timesteps_item, X_TIMESTEPS, Y_TIME_ELAPSED) for timesteps_item in tslist]
+
+    total_time = 0
+    total_num_timesteps = 0
+
+    for (i, (x, y)) in enumerate(xy_list):
+        total_num_timesteps += x[-1]
+        total_time += y[-1]
+
+    print(total_num_timesteps)
+    print(total_time)
+
+    average_time_per_timestep = total_num_timesteps / total_time
+
+    return average_time_per_timestep
+
+
 def plot_average_results(dirs, num_timesteps, xaxis, yaxis, task_name):
     global MAX_LENGTH
 
@@ -175,6 +198,8 @@ if __name__ == '__main__':
         HANDLES = []
         MAX_LENGTH = 100000
 
+        found_dirs = True
+
         for alg in training.AVAILABLE_ALGORITHMS:
             CURRENT_ALG = alg
             search_term = '-' + alg + '-' + env
@@ -186,14 +211,30 @@ if __name__ == '__main__':
                     if dirname.endswith(search_term):
                         log_dirs.append(os.path.join(TRAINING_INFO_DIR, dirname))
 
+            if len(log_dirs) == 0:
+                found_dirs = False
+                continue
+
             plot_average_results(log_dirs, None, X_EPISODES, Y_REWARDS, "Generic title")
+
+            print("Average time per timestep for algorithm '{}' in environment '{}': {}"
+                  .format(alg, env, calculate_average_time_per_timestep(log_dirs)))
 
             LINE_NUMBER += 1
 
-        plt.xlim(left=0, right=MAX_LENGTH)
+        if not found_dirs:
+            continue
+
+        plt.xlim(left=0)
         plt.title(env)
         plt.xlabel("Episodes")
         plt.ylabel("Average Reward")
         plt.tight_layout()
         plt.legend(handles=HANDLES)
+
+        figure_file_name = 'figures' + os.path.sep + '{}.eps'.format(env)
+
+        training.create_dir(figure_file_name)
+        plt.savefig(figure_file_name, format='eps')
+
         plt.show()

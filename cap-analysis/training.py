@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 AVAILABLE_ALGORITHMS = ['acktr', 'ppo', 'a2c', 'dqn']
-AVAILABLE_ENVIRONMENTS = ['cpa_sparse', 'cpa_dense']
+AVAILABLE_ENVIRONMENTS = ['cpa_sparse', 'cpa_dense', 'mc_sparse', 'mpc_dense']
 DEFAULT_TIMESTEPS = 100000
 
 TENSORBOARD_DIR_NAME = 'tensorboard'
@@ -20,7 +20,7 @@ def create_dir(directory):
 
 
 def train(environment, algorithm, timesteps):
-    from envs import cpa
+    from envs import cpa, mountain_car
 
     from stable_baselines.common.vec_env import DummyVecEnv
     from stable_baselines.bench import Monitor
@@ -49,6 +49,10 @@ def train(environment, algorithm, timesteps):
         env = cpa.CPAEnvSparse()
     elif environment == 'cpa_dense':
         env = cpa.CPAEnvDense()
+    elif environment == 'mc_sparse':
+        env = mountain_car.MountainCarSparseEnv()
+    elif environment == 'mc_dense':
+        env = mountain_car.MountainCarDenseEnv()
     else:
         raise Exception("Environment '{}' is unknown.".format(environment))
 

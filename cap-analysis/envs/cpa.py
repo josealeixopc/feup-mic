@@ -1,6 +1,7 @@
 import gym
 from gym import spaces
 
+
 class CPAEnv(gym.Env):
     """Custom Environment that follows gym interface.
 
@@ -21,7 +22,7 @@ class CPAEnv(gym.Env):
     N_DISCRETE_OBS = 10
 
     NEEDED_CORRECT_ANSWERS = 100
-    MAX_NUM_STEPS = 3*NEEDED_CORRECT_ANSWERS
+    MAX_NUM_STEPS = 3 * NEEDED_CORRECT_ANSWERS
 
     def __init__(self):
         super(CPAEnv, self).__init__()
