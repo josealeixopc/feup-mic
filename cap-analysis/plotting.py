@@ -20,7 +20,7 @@ colors = ['#000000', '#222222', '#444444', '#666666']
 CURRENT_ALG = None
 LINE_NUMBER = None
 HANDLES = None
-MAX_LENGTH = None
+MIN_NUM_TIMESTEPS = None
 
 
 def calculate_average_time_per_timestep(dirs):
@@ -31,6 +31,11 @@ def calculate_average_time_per_timestep(dirs):
 
     xy_list = [ts2xy(timesteps_item, X_TIMESTEPS, Y_TIME_ELAPSED) for timesteps_item in tslist]
 
+    min_num_timesteps = np.Inf
+    for (i, (x, y)) in enumerate(xy_list):
+        # Number of timesteps is cumulative
+        min_num_timesteps = min(min_num_timesteps, x[-1])
+
     total_time = 0
     total_num_timesteps = 0
 
@@ -38,40 +43,46 @@ def calculate_average_time_per_timestep(dirs):
         total_num_timesteps += x[-1]
         total_time += y[-1]
 
-    print(total_num_timesteps)
-    print(total_time)
-
-    average_time_per_timestep = total_num_timesteps / total_time
+    average_time_per_timestep = total_time / total_num_timesteps
 
     return average_time_per_timestep
 
 
-def plot_average_results(dirs, num_timesteps, xaxis, yaxis, task_name):
-    global MAX_LENGTH
+def plot_average_reward_per_number_of_timesteps(dirs):
+    """
+    Plots the average reward for cumulative timesteps of several runs.
+    :param dirs: The list of directories with monitors for the runs that should be averaged.
+    :return:
+    """
+    global MIN_NUM_TIMESTEPS
 
     tslist = []
     for folder in dirs:
         timesteps = load_results(folder)
-        if num_timesteps is not None:
-            timesteps = timesteps[timesteps.l.cumsum() <= num_timesteps]
         tslist.append(timesteps)
 
-    xy_list = [ts2xy(timesteps_item, xaxis, yaxis) for timesteps_item in tslist]
+    xy_list = [ts2xy(timesteps_item, X_TIMESTEPS, Y_REWARDS) for timesteps_item in tslist]
 
-    max_length = len(xy_list[0][1])
-    for l in xy_list:
-        max_length = min(max_length, len(l[1]))
-
-    MAX_LENGTH = min(max_length, MAX_LENGTH)
-
-    average_y = np.zeros(max_length)
-
+    min_num_timesteps = np.Inf
     for (i, (x, y)) in enumerate(xy_list):
-        average_y = np.add(average_y, y[:max_length])
+        min_num_timesteps = min(min_num_timesteps, x[-1])
 
-    average_y = np.true_divide(average_y, len(xy_list))
+    # Determine the dataset with less timesteps, so that we do not plot timesteps beyond that point
+    MIN_NUM_TIMESTEPS = min(min_num_timesteps, MIN_NUM_TIMESTEPS)
 
-    x_new, y_new = smooth_moving_average(range(len(average_y)), average_y, 10)
+    # Create new timestep axis and average reward axis
+    x_timesteps = np.arange(0, MIN_NUM_TIMESTEPS, 5)
+    y_average_rewards = np.zeros(len(x_timesteps))
+
+    # Because the timesteps are different in each dataset, we need to
+    for (i, (x, y)) in enumerate(xy_list):
+        y_interpolated = np.interp(x_timesteps, x, y)
+        y_average_rewards = np.add(y_average_rewards, y_interpolated)
+
+    num_datasets = len(xy_list)
+    average_y = np.true_divide(y_average_rewards, num_datasets)
+
+    x_new, y_new = smooth_moving_average(x_timesteps, average_y, 100)
 
     line, = plt.plot(x_new, y_new, linewidth=1, label=CURRENT_ALG)
 
@@ -196,7 +207,7 @@ if __name__ == '__main__':
     for env in training.AVAILABLE_ENVIRONMENTS:
         LINE_NUMBER = 0
         HANDLES = []
-        MAX_LENGTH = 100000
+        MIN_NUM_TIMESTEPS = 100000
 
         found_dirs = True
 
@@ -215,7 +226,7 @@ if __name__ == '__main__':
                 found_dirs = False
                 continue
 
-            plot_average_results(log_dirs, None, X_EPISODES, Y_REWARDS, "Generic title")
+            plot_average_reward_per_number_of_timesteps(log_dirs)
 
             print("Average time per timestep for algorithm '{}' in environment '{}': {}"
                   .format(alg, env, calculate_average_time_per_timestep(log_dirs)))
@@ -227,7 +238,7 @@ if __name__ == '__main__':
 
         plt.xlim(left=0)
         plt.title(env)
-        plt.xlabel("Episodes")
+        plt.xlabel("Number of Timesteps")
         plt.ylabel("Average Reward")
         plt.tight_layout()
         plt.legend(handles=HANDLES)
