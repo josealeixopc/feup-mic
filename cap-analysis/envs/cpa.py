@@ -1,7 +1,6 @@
 import gym
 from gym import spaces
 
-
 class CPAEnv(gym.Env):
     """Custom Environment that follows gym interface.
 
@@ -67,6 +66,18 @@ class CPAEnv(gym.Env):
     def close(self):
         pass
 
+    def correct_parity_guess(self, observation, action):
+        if observation % 2 == 0:
+            if action == self.EVEN:
+                return True
+            else:
+                return False
+        else:
+            if action == self.ODD:
+                return True
+            else:
+                return False
+
 
 class CPAEnvDense(CPAEnv):
     def step(self, action):
@@ -76,10 +87,11 @@ class CPAEnvDense(CPAEnv):
         done = False
         info = {}
 
-        if (self.current_observation % 2 == 0 and action == self.EVEN) or (
-                self.current_observation % 2 == 1 and action == self.ODD):
+        if self.correct_parity_guess(self.current_observation, action):
             reward = 1
             self.current_score += 1
+        else:
+            reward = -1
 
         if self.current_score >= self.NEEDED_CORRECT_ANSWERS or self.current_step_num >= self.MAX_NUM_STEPS:
             done = True
@@ -103,8 +115,7 @@ class CPAEnvSparse(CPAEnv):
         done = False
         info = {}
 
-        if (self.current_observation % 2 == 0 and action == self.EVEN) or (
-                self.current_observation % 2 == 1 and action == self.ODD):
+        if self.correct_parity_guess(self.current_observation, action):
             self.current_score += 1
 
         if self.current_score >= self.NEEDED_CORRECT_ANSWERS:
