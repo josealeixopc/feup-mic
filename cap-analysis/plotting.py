@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 from typing import List
 
@@ -154,13 +155,9 @@ def plot_curves(xy_list, xaxis, yaxis, title):
     minx = 0
 
     for (i, (x, y)) in enumerate(xy_list):
-        # window_size = 10  # window size
-        # x_new, y_new = smooth_moving_average(x, y, window_size)
-        # y_new = smooth_exponential_moving_average(y, 0.8)
+        plt.plot(x, y, linewidth=1, label='Run {}'.format(i))
 
-        plt.plot(x, y, linewidth=1, linestyle=lines[0], color=colors[0])
-
-    plt.xlim(left=minx, right=100)
+    plt.xlim(left=minx)
     plt.title(title)
     plt.xlabel(xaxis)
     plt.ylabel(yaxis)
@@ -211,6 +208,8 @@ if __name__ == '__main__':
 
         found_dirs = True
 
+        average_time_per_timestep = {}
+
         for alg in training.AVAILABLE_ALGORITHMS:
             CURRENT_ALG = alg
             search_term = '-' + alg + '-' + env
@@ -228,14 +227,15 @@ if __name__ == '__main__':
 
             plot_average_reward_per_number_of_timesteps(log_dirs)
 
-            print("Average time per timestep for algorithm '{}' in environment '{}': {}"
-                  .format(alg, env, calculate_average_time_per_timestep(log_dirs)))
+            average_time_per_timestep[alg] = calculate_average_time_per_timestep(log_dirs)
 
             LINE_NUMBER += 1
 
         if not found_dirs:
             continue
 
+        if env == 'cpa_dense':
+            plt.xlim(right=6000)
         plt.xlim(left=0)
         plt.title(env)
         plt.xlabel("Number of Timesteps")
@@ -249,3 +249,13 @@ if __name__ == '__main__':
         plt.savefig(figure_file_name, format='eps')
 
         plt.show()
+
+        average_timestep_file = 'figures' + os.path.sep + '{}-rewards.csv'.format(env)
+
+        training.create_dir(average_timestep_file)
+
+        # Save average time per timestep file
+        with open(average_timestep_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=average_time_per_timestep.keys())
+            writer.writeheader()
+            writer.writerow(average_time_per_timestep)
